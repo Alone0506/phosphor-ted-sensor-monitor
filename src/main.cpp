@@ -13,10 +13,9 @@ int main()
 
     // IPMI Object
     conn->request_name("xyz.openbmc_project.TedSensorMonitor");
-    auto objectServer = std::make_shared<sdbusplus::asio::object_server>(conn);
+    auto server = std::make_shared<sdbusplus::asio::object_server>(conn);
 
-    sdbusplus::bus::match_t tedSensorMonitor =
-        startTedSensorMonitor(objectServer);
+    auto tedSensorMonitor = std::make_unique<TedSensorMonitor>(conn, server);
 
     io.run();
     return 0;

@@ -4,7 +4,7 @@ project(
     version: '1.0',
     default_options: [
         'buildtype=debugoptimized',
-        'cpp_std=c++20',
+        'cpp_std=c++23',
         'warning_level=3',
         'werror=true',
     ],
@@ -17,20 +17,15 @@ executable(
     'phosphor-ted-sensor-monitor',
     [
         'src/main.cpp',
-        'src/tedSensorMonitor.hpp',
+        'src/tedSensorMonitor.cpp',
     ],
     dependencies: [
-        dependency('nlohmann_json', include_type: 'system'),
-        dependency('phosphor-dbus-interfaces'),
         dependency('phosphor-logging'),
         dependency('sdbusplus'),
-        dependency('sdeventplus'),  # for timer
     ],
     install: true,
     install_dir: get_option('bindir'),
 )
-
-install_data('ted_sensor_config.json', install_dir: pkgdatadir)
 
 systemd = dependency('systemd')
 conf_data = configuration_data()
