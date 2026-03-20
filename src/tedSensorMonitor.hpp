@@ -22,7 +22,6 @@ class TedSensorMonitor
 
     std::unique_ptr<sdbusplus::bus::match_t> nameOwnerChangedMatch = nullptr;
     std::unique_ptr<sdbusplus::bus::match_t> interfacesAddedMatch = nullptr;
-    // std::unique_ptr<sdbusplus::bus::match_t> interfacesRemovedMatch =
-    // nullptr; std::unique_ptr<sdbusplus::bus::match_t> propertyChangedMatch =
-    // nullptr;
+    std::unique_ptr<sdbusplus::bus::match_t> interfacesRemovedMatch = nullptr;
+    // std::unique_ptr<sdbusplus::bus::match_t> propertyChangedMatch = nullptr;
 };

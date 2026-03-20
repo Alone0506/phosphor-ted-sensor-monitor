@@ -39,45 +39,56 @@ void TedSensorMonitor::initMatches()
             {}
         });
 
-    const std::string interfaceMatchString =
-        sdbusplus::bus::match::rules::interfacesAdded() +
-        sdbusplus::bus::match::rules::sender("xyz.openbmc_project.TedSensor");
+    // const std::string interfaceMatchString =
+    //     sdbusplus::bus::match::rules::interfacesAdded() +
+    //     sdbusplus::bus::match::rules::sender("xyz.openbmc_project.TedSensor");
 
     interfacesAddedMatch = std::make_unique<sdbusplus::bus::match_t>(
-        static_cast<sdbusplus::bus_t&>(*conn), interfaceMatchString,
+        static_cast<sdbusplus::bus_t&>(*conn),
+        sdbusplus::bus::match::rules::interfacesAdded() +
+            sdbusplus::bus::match::rules::sender(serviceName),
         [](sdbusplus::message_t& m) {
             sdbusplus::message::object_path objPath;
             DBusInterfaceMap interfaces;
+            try
+            {
+                m.read(objPath, interfaces);
+            }
+            catch (const std::exception& e)
+            {
+                lg2::error("Failed to read object path");
+                return;
+            }
 
-            m.read(objPath, interfaces);
+            // auto sender = m.get_sender();
+            // lg2::info("InterfacesAdded: {PATH} sender: {SENDER}", "PATH",
+            //           objPath.str, "SENDER", sender);
 
             // lg2::info("InterfacesAdded: {PATH}", "PATH", objPath.str);
             for (auto& [iface, props] : interfaces)
             {
                 for (auto& [prop, value] : props)
                 {
-                    lg2::info(
-                        "Interface {IFACE} added with property {PROP} and value {VAL}",
-                        "IFACE", iface, "PROP", prop, "VAL", value);
-                    // addInterface(objPath, iface, prop, value);
+                    lg2::info("interface: {IFACE}, property: {PROP}", "IFACE",
+                              iface, "PROP", prop);
                 }
             }
         });
 
-    interfacesRemovedMatch = std::make_unique<sdbusplus::bus::match_t>(
-        static_cast<sdbusplus::bus_t&>(*conn), interfaceMatchString,
-        [this](sdbusplus::message_t& m) {
-            sdbusplus::message::object_path objPath;
-            std::vector<std::string> interfaces;
+    // interfacesRemovedMatch = std::make_unique<sdbusplus::bus::match_t>(
+    //     static_cast<sdbusplus::bus_t&>(*conn), interfaceMatchString,
+    //     [this](sdbusplus::message_t& m) {
+    //         sdbusplus::message::object_path objPath;
+    //         std::vector<std::string> interfaces;
 
-            m.read(objPath, interfaces);
+    //         m.read(objPath, interfaces);
 
-            for (auto& iface : interfaces)
-            {
-                lg2::info("Interface {IFACE} removed", "IFACE", iface);
-                // removeInterface(objPath, iface);
-            }
-        });
+    //         for (auto& iface : interfaces)
+    //         {
+    //             lg2::info("Interface {IFACE} removed", "IFACE", iface);
+    //             // removeInterface(objPath, iface);
+    //         }
+    //     });
 
     // const std::string propertyChangedMatchString =
     //     sdbusplus::bus::match::rules::propertiesChanged(_path, _interface) +
