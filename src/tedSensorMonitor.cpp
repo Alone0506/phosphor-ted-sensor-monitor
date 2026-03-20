@@ -66,7 +66,7 @@ void TedSensorMonitor::initMatches()
 
     interfacesRemovedMatch = std::make_unique<sdbusplus::bus::match_t>(
         static_cast<sdbusplus::bus_t&>(*conn), interfaceMatchString,
-        [this](sdbusplus::message_t&) {
+        [this](sdbusplus::message_t& m) {
             sdbusplus::message::object_path objPath;
             std::vector<std::string> interfaces;
 
