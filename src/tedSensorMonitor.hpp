@@ -9,7 +9,7 @@ class TedSensorMonitor
     TedSensorMonitor(
         std::shared_ptr<sdbusplus::asio::connection> conn,
         std::shared_ptr<sdbusplus::asio::object_server> objectServer) :
-        conn(conn), server(objectServer)
+        conn(conn), objServer(objectServer)
     {
         initMatches();
     }
@@ -18,10 +18,10 @@ class TedSensorMonitor
     void initMatches();
 
     std::shared_ptr<sdbusplus::asio::connection> conn;
-    std::shared_ptr<sdbusplus::asio::object_server> server;
+    std::shared_ptr<sdbusplus::asio::object_server> objServer;
 
     std::unique_ptr<sdbusplus::bus::match_t> nameOwnerChangedMatch = nullptr;
-    // std::unique_ptr<sdbusplus::bus::match_t> interfacesAddedMatch = nullptr;
+    std::unique_ptr<sdbusplus::bus::match_t> interfacesAddedMatch = nullptr;
     // std::unique_ptr<sdbusplus::bus::match_t> interfacesRemovedMatch =
     // nullptr; std::unique_ptr<sdbusplus::bus::match_t> propertyChangedMatch =
     // nullptr;

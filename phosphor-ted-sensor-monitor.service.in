@@ -4,10 +4,10 @@ Description=Ted sensor monitor
 
 [Service]
 Restart=always
-ExecStart=@bindir@/phosphor-ted-sensor-monitor.service
+ExecStart=@bindir@/phosphor-ted-sensor-monitor
 Type=dbus
 BusName=xyz.openbmc_project.TedSensorMonitor
-SyslogIdentifier=phosphor-ted-sensor-monitor.service
+SyslogIdentifier=phosphor-ted-sensor-monitor
 
 [Install]
 WantedBy=multi-user.target
