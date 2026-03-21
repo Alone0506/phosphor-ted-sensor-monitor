@@ -1,3 +1,9 @@
+# Remove & Add sensor (TedSensor2 as example)
+
+```bash
+busctl call xyz.openbmc_project.TedSensor /xyz/openbmc_project/AddRemoveSensor xyz.openbmc_project.AddRemoveSensor RemoveSensor s "TedSensor2";busctl call xyz.openbmc_project.TedSensor /xyz/openbmc_project/AddRemoveSensor xyz.openbmc_project.AddRemoveSensor AddSensor s "TedSensor2";journalctl | grep -i ted-sensor-monitor
+```
+
 ```bash
 root@evb-ast2600:~# dbus-monitor --system "type='signal',sender='xyz.openbmc_project.TedSensor'"
 signal time=1773915752.549195 sender=org.freedesktop.DBus -> destination=:1.70 serial=4294967295 path=/org/freedesktop/DBus; interface=org.freedesktop.DBus; member=NameAcquired
