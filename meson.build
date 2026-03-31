@@ -17,6 +17,7 @@ executable(
     'phosphor-ted-sensor-monitor',
     [
         'src/main.cpp',
+        'src/sensor.cpp',
         'src/tedSensorMonitor.cpp',
     ],
     dependencies: [

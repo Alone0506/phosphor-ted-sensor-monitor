@@ -12,8 +12,8 @@ using DBusValue =
                  std::vector<std::string>,
                  std::vector<std::tuple<std::string, std::string, std::string>>,
                  std::tuple<std::vector<uint8_t>, std::vector<uint8_t>>>;
-using DBusInterface = std::string;
 using DBusPropertyMap = std::map<DBusProperty, DBusValue>;
+using DBusInterface = std::string;
 using DBusInterfaceMap = std::map<DBusInterface, DBusPropertyMap>;
 
 static constexpr auto serviceName = "xyz.openbmc_project.TedSensor";
@@ -22,22 +22,28 @@ static constexpr auto serviceName = "xyz.openbmc_project.TedSensor";
 // journalctl | grep -i ted-sensor-monitor
 void TedSensorMonitor::initMatches()
 {
-    nameOwnerChangedMatch = std::make_unique<sdbusplus::bus::match_t>(
-        static_cast<sdbusplus::bus_t&>(*conn),
-        sdbusplus::bus::match::rules::nameOwnerChanged(),
-        [this](sdbusplus::message_t& m) {
-            auto [name, oldOwner,
-                  newOwner] = m.unpack<std::string, std::string, std::string>();
-
-            if (name.starts_with(':'))
+    conn->async_method_call(
+        [this](boost::system::error_code& ec,
+               const DBusObjectMap& resp) mutable {
+            if (ec)
             {
-                // we should do nothing with unique-name connections
+                lg2::error("Failed to call getall on {SERVICE}: {ERR}",
+                           "SERVICE", serviceName, "ERR", ec.message());
                 return;
             }
 
-            if (name.contains("xyz.openbmc_project.TedSensor"))
-            {}
-        });
+            for (const auto& [path, interfaces] : resp)
+            {
+                if (!this->sensors.contains(path))
+                {
+                    auto sensorPtr = std::make_shared<Sensor>(
+                        this->conn, this->objServer, path, interfaces);
+                    this->sensors.emplace(path, sensorPtr);
+                }
+            }
+        },
+        serviceName, "/xyz/openbmc_project/TedSensor",
+        "org.freedesktop.DBus.Properties", "GetManagedObjects");
 
     const std::string interfaceMatchString =
         sdbusplus::bus::match::rules::interfacesAdded() +
@@ -45,7 +51,7 @@ void TedSensorMonitor::initMatches()
 
     interfacesAddedMatch = std::make_unique<sdbusplus::bus::match_t>(
         static_cast<sdbusplus::bus_t&>(*conn), interfaceMatchString,
-        [](sdbusplus::message_t& m) {
+        [this](sdbusplus::message_t& m) {
             sdbusplus::message::object_path objPath;
             DBusInterfaceMap interfaces;
             try
@@ -68,6 +74,17 @@ void TedSensorMonitor::initMatches()
                               iface, "PROP", prop);
                 }
             }
+
+            if (!this->sensors.contains(objPath.str))
+            {
+                auto sensorPtr = std::make_shared<Sensor>(
+                    this->conn, this->objServer, objPath.str, interfaces);
+                this->sensors.emplace(objPath.str, sensorPtr);
+            }
+            else
+            {
+                this->sensors.at(objPath.str)->addInterfaces(interfaces);
+            }
         });
 
     interfacesRemovedMatch = std::make_unique<sdbusplus::bus::match_t>(
@@ -89,14 +106,14 @@ void TedSensorMonitor::initMatches()
             {
                 lg2::info("Interface {IFACE} removed", "IFACE", iface);
             }
+
+            if (!this->sensors.contains(objPath.str))
+            {
+                lg2::error(
+                    "Received InterfacesRemoved for unknown object path {OBJPATH}",
+                    "OBJPATH", objPath.str);
+                return;
+            }
+            this->sensors.at(objPath.str)->removeInterfaces(interfaces);
         });
-
-    // const std::string propertyChangedMatchString =
-    //     sdbusplus::bus::match::rules::propertiesChanged(_path, _interface) +
-    //     sdbusplus::bus::match::rules::sender("xyz.openbmc_project.TedSensor");
-
-    // propertyChangedMatch = std::make_unique<sdbusplus::bus::match_t>(
-    //     static_cast<sdbusplus::bus_t&>(*conn),
-    //     sdbusplus::bus::match::rules::propertiesChanged(_path, _interface),
-    //     [this](sdbusplus::message_t&) {});
 }
