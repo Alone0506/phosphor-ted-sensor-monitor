@@ -6,44 +6,37 @@
 // see phosphor-logging/lib/include/phosphor-logging/lg2.hpp
 PHOSPHOR_LOG2_USING_WITH_FLAGS;
 
-using DBusProperty = std::string;
-using DBusValue =
-    std::variant<std::string, bool, std::vector<uint8_t>,
-                 std::vector<std::string>,
-                 std::vector<std::tuple<std::string, std::string, std::string>>,
-                 std::tuple<std::vector<uint8_t>, std::vector<uint8_t>>>;
-using DBusPropertyMap = std::map<DBusProperty, DBusValue>;
-using DBusInterface = std::string;
-using DBusInterfaceMap = std::map<DBusInterface, DBusPropertyMap>;
-
 static constexpr auto serviceName = "xyz.openbmc_project.TedSensor";
 
 // systemctl status phosphor-ted-sensor-monitor.service
 // journalctl | grep -i ted-sensor-monitor
+// busctl tree xyz.openbmc_project.TedSensor
 void TedSensorMonitor::initMatches()
 {
-    conn->async_method_call(
-        [this](boost::system::error_code& ec,
-               const DBusObjectMap& resp) mutable {
-            if (ec)
-            {
-                lg2::error("Failed to call getall on {SERVICE}: {ERR}",
-                           "SERVICE", serviceName, "ERR", ec.message());
-                return;
-            }
+    // conn->async_method_call(
+    //     [this](boost::system::error_code& ec,
+    //            const DBusObjectMap& resp) mutable {
+    //         if (ec)
+    //         {
+    //             lg2::error(
+    //                 "Failed to call GetManagedObjects on {SERVICE}: {ERR}",
+    //                 "SERVICE", serviceName, "ERR", ec.message());
+    //             return;
+    //         }
 
-            for (const auto& [path, interfaces] : resp)
-            {
-                if (!this->sensors.contains(path))
-                {
-                    auto sensorPtr = std::make_shared<Sensor>(
-                        this->conn, this->objServer, path, interfaces);
-                    this->sensors.emplace(path, sensorPtr);
-                }
-            }
-        },
-        serviceName, "/xyz/openbmc_project/TedSensor",
-        "org.freedesktop.DBus.Properties", "GetManagedObjects");
+    //         for (const auto& [path, interfaces] : resp)
+    //         {
+    //             const auto& objPath = path.str;
+    //             if (!this->sensors.contains(objPath))
+    //             {
+    //                 auto sensorPtr = std::make_shared<Sensor>(
+    //                     this->conn, this->objServer, objPath, interfaces);
+    //                 this->sensors.emplace(objPath, sensorPtr);
+    //             }
+    //         }
+    //     },
+    //     serviceName, "/xyz/openbmc_project/sensors",
+    //     "org.freedesktop.DBus.ObjectManager", "GetManagedObjects");
 
     const std::string interfaceMatchString =
         sdbusplus::bus::match::rules::interfacesAdded() +

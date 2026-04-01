@@ -10,7 +10,6 @@
 #include <memory>
 #include <string>
 
-using DBusPath = std::string;
 class TedSensorMonitor
 {
   public:

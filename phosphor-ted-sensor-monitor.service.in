@@ -1,6 +1,7 @@
 [Unit]
-Before=phosphor-ted-sensor.service
 Description=Ted sensor monitor
+Requires=phosphor-ted-sensor.service
+After=phosphor-ted-sensor.service
 
 [Service]
 Restart=always
