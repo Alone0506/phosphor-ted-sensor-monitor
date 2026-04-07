@@ -428,3 +428,171 @@ Mar 19 10:23:42 evb-ast2600 phosphor-ted-sensor-monitor[280]: interface: xyz.ope
 Mar 19 10:23:42 evb-ast2600 phosphor-ted-sensor-monitor[280]: interface: xyz.openbmc_project.Sensor.Value, property: Value
 Mar 19 10:23:42 evb-ast2600 phosphor-ted-sensor-monitor[280]: interface: xyz.openbmc_project.State.Decorator.Availability, property: Available
 ```
+
+```bash
+root@evb-ast2600:~# busctl tree xyz.openbmc_project.TedSensor
+`- /xyz
+  `- /xyz/openbmc_project
+    |- /xyz/openbmc_project/AddRemoveSensor
+    `- /xyz/openbmc_project/sensors
+      `- /xyz/openbmc_project/sensors/temperature
+        |- /xyz/openbmc_project/sensors/temperature/TedSensor1
+        `- /xyz/openbmc_project/sensors/temperature/TedSensor2
+
+root@evb-ast2600:~# busctl call xyz.openbmc_project.TedSensor /xyz/openbmc_project/sensors org.freedesktop.DBus.ObjectManager GetManagedObjects -j
+{
+        "type" : "a{oa{sa{sv}}}",
+        "data" : [
+                {
+                        "/xyz/openbmc_project/sensors/temperature/TedSensor2" : {
+                                "org.freedesktop.DBus.Peer" : {},
+                                "org.freedesktop.DBus.Introspectable" : {},
+                                "org.freedesktop.DBus.Properties" : {},
+                                "xyz.openbmc_project.Association.Definitions" : {
+                                        "Associations" : {
+                                                "type" : "a(sss)",
+                                                "data" : [
+                                                        [
+                                                                "chassis",
+                                                                "all_sensors",
+                                                                "/xyz/openbmc_project/inventory/system/board/Ted_Board"
+                                                        ]
+                                                ]
+                                        }
+                                },
+                                "xyz.openbmc_project.State.Decorator.Availability" : {
+                                        "Available" : {
+                                                "type" : "b",
+                                                "data" : true
+                                        }
+                                },
+                                "xyz.openbmc_project.Sensor.Threshold.Warning" : {
+                                        "WarningHigh" : {
+                                                "type" : "d",
+                                                "data" : 6.00000000000000000e+01
+                                        },
+                                        "WarningLow" : {
+                                                "type" : "d",
+                                                "data" : 1.00000000000000000e+01
+                                        },
+                                        "WarningAlarmHigh" : {
+                                                "type" : "b",
+                                                "data" : false
+                                        },
+                                        "WarningAlarmLow" : {
+                                                "type" : "b",
+                                                "data" : false
+                                        }
+                                },
+                                "xyz.openbmc_project.Sensor.Threshold.Critical" : {
+                                        "CriticalHigh" : {
+                                                "type" : "d",
+                                                "data" : 8.00000000000000000e+01
+                                        },
+                                        "CriticalLow" : {
+                                                "type" : "d",
+                                                "data" : 0.00000000000000000e+00
+                                        },
+                                        "CriticalAlarmHigh" : {
+                                                "type" : "b",
+                                                "data" : false
+                                        },
+                                        "CriticalAlarmLow" : {
+                                                "type" : "b",
+                                                "data" : false
+                                        }
+                                },
+                                "xyz.openbmc_project.Sensor.Value" : {
+                                        "Value" : {
+                                                "type" : "d",
+                                                "data" : 0.00000000000000000e+00
+                                        },
+                                        "MaxValue" : {
+                                                "type" : "d",
+                                                "data" : 1.27000000000000000e+02
+                                        },
+                                        "MinValue" : {
+                                                "type" : "d",
+                                                "data" : -1.28000000000000000e+02
+                                        },
+                                        "Unit" : {
+                                                "type" : "s",
+                                                "data" : "xyz.openbmc_project.Sensor.Value.Unit.DegreesC"
+                                        }
+                                }
+                        },
+                        "/xyz/openbmc_project/sensors/temperature/TedSensor1" : {
+                                "org.freedesktop.DBus.Peer" : {},
+                                "org.freedesktop.DBus.Introspectable" : {},
+                                "org.freedesktop.DBus.Properties" : {},
+                                "xyz.openbmc_project.Association.Definitions" : {
+                                        "Associations" : {
+                                                "type" : "a(sss)",
+                                                "data" : []
+                                        }
+                                },
+                                "xyz.openbmc_project.State.Decorator.Availability" : {
+                                        "Available" : {
+                                                "type" : "b",
+                                                "data" : true
+                                        }
+                                },
+                                "xyz.openbmc_project.Sensor.Threshold.Warning" : {
+                                        "WarningHigh" : {
+                                                "type" : "d",
+                                                "data" : 6.00000000000000000e+01
+                                        },
+                                        "WarningLow" : {
+                                                "type" : "d",
+                                                "data" : null
+                                        },
+                                        "WarningAlarmHigh" : {
+                                                "type" : "b",
+                                                "data" : false
+                                        },
+                                        "WarningAlarmLow" : {
+                                                "type" : "b",
+                                                "data" : false
+                                        }
+                                },
+                                "xyz.openbmc_project.Sensor.Threshold.Critical" : {
+                                        "CriticalHigh" : {
+                                                "type" : "d",
+                                                "data" : 8.00000000000000000e+01
+                                        },
+                                        "CriticalLow" : {
+                                                "type" : "d",
+                                                "data" : null
+                                        },
+                                        "CriticalAlarmHigh" : {
+                                                "type" : "b",
+                                                "data" : false
+                                        },
+                                        "CriticalAlarmLow" : {
+                                                "type" : "b",
+                                                "data" : false
+                                        }
+                                },
+                                "xyz.openbmc_project.Sensor.Value" : {
+                                        "Value" : {
+                                                "type" : "d",
+                                                "data" : 0.00000000000000000e+00
+                                        },
+                                        "MaxValue" : {
+                                                "type" : "d",
+                                                "data" : 1.27000000000000000e+02
+                                        },
+                                        "MinValue" : {
+                                                "type" : "d",
+                                                "data" : -1.28000000000000000e+02
+                                        },
+                                        "Unit" : {
+                                                "type" : "s",
+                                                "data" : "xyz.openbmc_project.Sensor.Value.Unit.DegreesC"
+                                        }
+                                }
+                        }
+                }
+        ]
+}
+```

@@ -3,110 +3,121 @@
 
 #include <phosphor-logging/lg2.hpp>
 
+#include <iostream>
+
 // see phosphor-logging/lib/include/phosphor-logging/lg2.hpp
 PHOSPHOR_LOG2_USING_WITH_FLAGS;
 
 static constexpr auto serviceName = "xyz.openbmc_project.TedSensor";
 
+using DBusObjectPath = sdbusplus::message::object_path;
+using DBusObjectMap = std::map<DBusObjectPath, DBusInterfaceMap>;
+
 // systemctl status phosphor-ted-sensor-monitor.service
 // journalctl | grep -i ted-sensor-monitor
 // busctl tree xyz.openbmc_project.TedSensor
-void TedSensorMonitor::initMatches()
+// busctl tree xyz.openbmc_project.TedSensorMonitor
+// busctl call xyz.openbmc_project.TedSensor /xyz/openbmc_project/sensors
+// org.freedesktop.DBus.ObjectManager GetManagedObjects
+void TedSensorMonitor::initial()
 {
-    // conn->async_method_call(
-    //     [this](boost::system::error_code& ec,
-    //            const DBusObjectMap& resp) mutable {
-    //         if (ec)
-    //         {
-    //             lg2::error(
-    //                 "Failed to call GetManagedObjects on {SERVICE}: {ERR}",
-    //                 "SERVICE", serviceName, "ERR", ec.message());
-    //             return;
-    //         }
+    // initial interfaceAdded and interfaceRemoved matches
+    registerMatch();
 
-    //         for (const auto& [path, interfaces] : resp)
-    //         {
-    //             const auto& objPath = path.str;
-    //             if (!this->sensors.contains(objPath))
-    //             {
-    //                 auto sensorPtr = std::make_shared<Sensor>(
-    //                     this->conn, this->objServer, objPath, interfaces);
-    //                 this->sensors.emplace(objPath, sensorPtr);
-    //             }
-    //         }
-    //     },
-    //     serviceName, "/xyz/openbmc_project/sensors",
-    //     "org.freedesktop.DBus.ObjectManager", "GetManagedObjects");
-
-    const std::string interfaceMatchString =
-        sdbusplus::bus::match::rules::interfacesAdded() +
-        sdbusplus::bus::match::rules::sender(serviceName);
-
-    interfacesAddedMatch = std::make_unique<sdbusplus::bus::match_t>(
-        static_cast<sdbusplus::bus_t&>(*conn), interfaceMatchString,
-        [this](sdbusplus::message_t& m) {
-            sdbusplus::message::object_path objPath;
-            DBusInterfaceMap interfaces;
-            try
+    conn->async_method_call(
+        [this](const boost::system::error_code ec, DBusObjectMap objects) {
+            if (ec)
             {
-                m.read(objPath, interfaces);
-            }
-            catch (const std::exception& e)
-            {
-                lg2::error("Failed to read object path");
+                lg2::error("Failed to get managed objects: {ERROR}", "ERROR",
+                           ec.message());
                 return;
             }
-            lg2::info("Object path {OBJPATH} added with interfaces", "OBJPATH",
-                      objPath.str);
-
-            for (auto& [iface, props] : interfaces)
+            std::cout << "Initial object paths with interfaces:" << std::endl;
+            for (const auto& [objPath, interfaces] : objects)
             {
-                for (auto& [prop, value] : props)
+                std::cout << "Object path: " << objPath.str << std::endl;
+                if (!this->sensors.contains(objPath.str))
                 {
-                    lg2::info("interface: {IFACE}, property: {PROP}", "IFACE",
-                              iface, "PROP", prop);
+                    std::cout << "create: " << objPath.str << std::endl;
+                    auto sensorPtr = std::make_shared<Sensor>(
+                        this->conn, this->objServer, objPath.str, interfaces);
+                    this->sensors.emplace(objPath.str, std::move(sensorPtr));
                 }
             }
+        },
+        serviceName, "/xyz/openbmc_project/sensors",
+        "org.freedesktop.DBus.ObjectManager", "GetManagedObjects");
+}
 
-            if (!this->sensors.contains(objPath.str))
-            {
-                auto sensorPtr = std::make_shared<Sensor>(
-                    this->conn, this->objServer, objPath.str, interfaces);
-                this->sensors.emplace(objPath.str, sensorPtr);
-            }
-            else
-            {
-                this->sensors.at(objPath.str)->addInterfaces(interfaces);
-            }
-        });
+void TedSensorMonitor::registerMatch()
+{
+    using namespace sdbusplus::bus::match::rules;
+    auto& bus = static_cast<sdbusplus::bus_t&>(*conn);
+    if (!interfacesAddedMatch)
+    {
+        interfacesAddedMatch = std::make_unique<sdbusplus::bus::match_t>(
+            bus,
+            interfacesAdded() + path_namespace("/xyz/openbmc_project/sensors") +
+                sender(serviceName),
+            [this](sdbusplus::message_t& m) { interfaceAddedCallback(m); });
+    }
+    if (!interfacesRemovedMatch)
+    {
+        interfacesRemovedMatch = std::make_unique<sdbusplus::bus::match_t>(
+            bus,
+            interfacesRemoved() +
+                path_namespace("/xyz/openbmc_project/sensors") +
+                sender(serviceName),
+            [this](sdbusplus::message_t& m) { interfaceRemovedCallback(m); });
+    }
+}
 
-    interfacesRemovedMatch = std::make_unique<sdbusplus::bus::match_t>(
-        static_cast<sdbusplus::bus_t&>(*conn), interfaceMatchString,
-        [this](sdbusplus::message_t& m) {
-            sdbusplus::message::object_path objPath;
-            std::vector<std::string> interfaces;
-            try
-            {
-                m.read(objPath, interfaces);
-            }
-            catch (const std::exception& e)
-            {
-                lg2::error("Failed to read object path");
-                return;
-            }
+void TedSensorMonitor::interfaceAddedCallback(sdbusplus::message_t& m)
+{
+    sdbusplus::message::object_path objPath;
+    DBusInterfaceMap ifaceMap;
+    try
+    {
+        m.read(objPath, ifaceMap);
+    }
+    catch (const std::exception& e)
+    {
+        lg2::error("Failed to read object path");
+        return;
+    }
 
-            for (auto& iface : interfaces)
-            {
-                lg2::info("Interface {IFACE} removed", "IFACE", iface);
-            }
+    if (!this->sensors.contains(objPath.str))
+    {
+        auto sensorPtr = std::make_shared<Sensor>(this->conn, this->objServer,
+                                                  objPath.str, ifaceMap);
+        this->sensors.emplace(objPath.str, std::move(sensorPtr));
+    }
+    else
+    {
+        this->sensors.at(objPath.str)->addInterfaces(ifaceMap);
+    }
+}
 
-            if (!this->sensors.contains(objPath.str))
-            {
-                lg2::error(
-                    "Received InterfacesRemoved for unknown object path {OBJPATH}",
-                    "OBJPATH", objPath.str);
-                return;
-            }
-            this->sensors.at(objPath.str)->removeInterfaces(interfaces);
-        });
+void TedSensorMonitor::interfaceRemovedCallback(sdbusplus::message_t& m)
+{
+    sdbusplus::message::object_path objPath;
+    std::vector<std::string> interfaces;
+    try
+    {
+        m.read(objPath, interfaces);
+    }
+    catch (const std::exception& e)
+    {
+        lg2::error("Failed to read object path");
+        return;
+    }
+
+    if (!this->sensors.contains(objPath.str))
+    {
+        lg2::error(
+            "Received InterfacesRemoved for unknown object path {OBJPATH}",
+            "OBJPATH", objPath.str);
+        return;
+    }
+    this->sensors.at(objPath.str)->removeInterfaces(interfaces);
 }

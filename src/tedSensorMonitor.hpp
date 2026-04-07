@@ -18,18 +18,20 @@ class TedSensorMonitor
         std::shared_ptr<sdbusplus::asio::object_server> objectServer) :
         conn(conn), objServer(objectServer)
     {
-        initMatches();
+        initial();
     }
 
   private:
-    void initMatches();
+    void initial();
+    void registerMatch();
+    void interfaceAddedCallback(sdbusplus::message_t& m);
+    void interfaceRemovedCallback(sdbusplus::message_t& m);
 
     std::shared_ptr<sdbusplus::asio::connection> conn;
     std::shared_ptr<sdbusplus::asio::object_server> objServer;
 
     std::unique_ptr<sdbusplus::bus::match_t> interfacesAddedMatch = nullptr;
     std::unique_ptr<sdbusplus::bus::match_t> interfacesRemovedMatch = nullptr;
-    std::unique_ptr<sdbusplus::bus::match_t> propertyChangedMatch = nullptr;
 
     std::map<DBusPath, std::shared_ptr<Sensor>> sensors;
 };
