@@ -1,118 +1,104 @@
-# phosphor-ted-sensor
+# phosphor-ted-sensor-monitor
 
-phosphor-ted-sensor is a simulation sensor service for OpenBMC. It creates D-Bus
-sensor objects based on a JSON configuration file and reads sensor values from
-simulation files on disk, making it useful for development and testing without
-real hardware.
+`phosphor-ted-sensor-monitor` is a D-Bus mirror service for sensor objects. It
+watches sensor objects exposed by `xyz.openbmc_project.TedSensor` and
+re-publishes them on `xyz.openbmc_project.TedSensorMonitor` with the same object
+paths, interfaces, and property values.
 
-## D-Bus
+This project does not create simulation sensors and does not parse sensor JSON
+configs. It only monitors and mirrors an existing sensor service.
 
-- **Service name:** `xyz.openbmc_project.TedSensor`
-- **Object path:** `/xyz/openbmc_project/sensors/<SensorType>/<Name>`
+## D-Bus roles
 
-Each sensor object implements the following D-Bus interfaces:
+- Source service (watched): `xyz.openbmc_project.TedSensor`
+- Mirror service (this daemon): `xyz.openbmc_project.TedSensorMonitor`
+- Sensor namespace: `/xyz/openbmc_project/sensors`
 
-| Interface                                          | Description                             |
-| -------------------------------------------------- | --------------------------------------- |
-| `xyz.openbmc_project.Sensor.Value`                 | Sensor value, unit, min/max             |
-| `xyz.openbmc_project.Sensor.Threshold.Warning`     | Warning high/low thresholds and alarms  |
-| `xyz.openbmc_project.Sensor.Threshold.Critical`    | Critical high/low thresholds and alarms |
-| `xyz.openbmc_project.State.Decorator.Availability` | Sensor availability                     |
-| `xyz.openbmc_project.Association.Definitions`      | Inventory associations                  |
+## Runtime behavior
 
-## Configuration
+At startup, the daemon:
 
-The service reads `ted_sensor_config.json` from the first location found:
-
-1. The current working directory
-2. `/var/lib/phosphor-ted-sensor`
-3. `/usr/share/phosphor-ted-sensor`
-
-By default the build installs a sample config into (3).
-
-### Configuration format
-
-The config file is a JSON array. Each element defines one sensor:
-
-```json
-[
-  {
-    "Desc": {
-      "Name": "TestSensor",
-      "SensorType": "temperature",
-      "MaxValue": 127.0,
-      "MinValue": -128.0
-    },
-    "Threshold": {
-      "CriticalHigh": 80,
-      "WarningHigh": 60,
-      "WarningLow": 10,
-      "CriticalLow": 0
-    },
-    "Associations": [
-      [
-        "chassis",
-        "all_sensors",
-        "/xyz/openbmc_project/inventory/system/board/Ted_Board"
-      ]
-    ]
-  }
-]
-```
-
-| Field                    | Required | Description                                             |
-| ------------------------ | -------- | ------------------------------------------------------- |
-| `Desc.Name`              | Yes      | Sensor name (spaces are replaced with `_`)              |
-| `Desc.SensorType`        | Yes      | Sensor type, determines the unit (see table below)      |
-| `Desc.MaxValue`          | No       | Maximum sensor value for clamping                       |
-| `Desc.MinValue`          | No       | Minimum sensor value for clamping                       |
-| `Threshold.CriticalHigh` | No       | Critical high threshold                                 |
-| `Threshold.CriticalLow`  | No       | Critical low threshold                                  |
-| `Threshold.WarningHigh`  | No       | Warning high threshold                                  |
-| `Threshold.WarningLow`   | No       | Warning low threshold                                   |
-| `Associations`           | No       | D-Bus association tuples `[forward, reverse, endpoint]` |
-
-### Supported sensor types
-
-| SensorType    | Unit     |
-| ------------- | -------- |
-| `temperature` | DegreesC |
-| `fan_tach`    | RPMS     |
-| `fan_pwm`     | Percent  |
-| `voltage`     | Volts    |
-| `current`     | Amperes  |
-| `power`       | Watts    |
-| `energy`      | Joules   |
-| `utilization` | Percent  |
-| `altitude`    | Meters   |
-| `airflow`     | CFM      |
-| `pressure`    | Pascals  |
-
-## How it works
-
-1. On startup the service parses the JSON config and creates D-Bus sensor
+1. Requests D-Bus name `xyz.openbmc_project.TedSensorMonitor`.
+2. Registers signal matches from `xyz.openbmc_project.TedSensor` under
+   `/xyz/openbmc_project/sensors` for:
+   - `org.freedesktop.DBus.ObjectManager.InterfacesAdded`
+   - `org.freedesktop.DBus.ObjectManager.InterfacesRemoved`
+3. Calls `GetManagedObjects` on the source service to bootstrap existing sensor
    objects.
-2. A periodic timer fires every **1 second** and reads each sensor's simulation
-   file from `/tmp/sensor/simulation/<Name>`. The file should contain a single
-   numeric value.
-3. The value is clamped to `[MinValue, MaxValue]` and published on D-Bus.
-4. After each read the service checks all configured thresholds and
-   asserts/deasserts alarm signals as appropriate.
 
-## Quick start (on BMC or QEMU)
+For each sensor object path:
+
+- Creates matching interfaces locally via `sdbusplus::asio::object_server`.
+- Registers all initial properties with concrete types.
+- Listens for `org.freedesktop.DBus.Properties.PropertiesChanged` on that path
+  (from source service only), then updates mirrored properties.
+- Removes interfaces when source emits `InterfacesRemoved`.
+
+Implementation notes:
+
+- Interfaces starting with `org.freedesktop.DBus` are ignored when mirroring.
+- Mirroring is one-way (`TedSensor` -> `TedSensorMonitor`).
+- State is not persisted; data is rebuilt from D-Bus at daemon start.
+
+## Build
+
+Dependencies:
+
+- `sdbusplus`
+- `phosphor-logging`
+- `systemd` (for unit installation)
+
+Local build:
 
 ```bash
-# Check service status
-systemctl status phosphor-ted-sensor.service
+meson setup build
+meson compile -C build
+meson install -C build
+```
 
-# Browse the D-Bus tree
+## systemd service
+
+Installed unit: `phosphor-ted-sensor-monitor.service`
+
+- `Type=dbus`
+- `BusName=xyz.openbmc_project.TedSensorMonitor`
+- `Requires=phosphor-ted-sensor.service`
+- `After=phosphor-ted-sensor.service`
+
+## Quick verification (BMC/QEMU)
+
+```bash
+# Service status
+systemctl status phosphor-ted-sensor.service phosphor-ted-sensor-monitor.service
+
+# Compare source and mirror trees
 busctl tree xyz.openbmc_project.TedSensor
+busctl tree xyz.openbmc_project.TedSensorMonitor
 
-# Inspect a sensor
+# Compare one sensor object on both services
 busctl introspect xyz.openbmc_project.TedSensor \
-    /xyz/openbmc_project/sensors/temperature/TestSensor
+    /xyz/openbmc_project/sensors/temperature/TedSensor1
+busctl introspect xyz.openbmc_project.TedSensorMonitor \
+    /xyz/openbmc_project/sensors/temperature/TedSensor1
 
-# Write a simulated value
-mkdir -p /tmp/sensor/simulation
-echo 75 > /tmp/sensor/simulation/TestSensor
+# Monitor source signals
+dbus-monitor --system "type='signal',sender='xyz.openbmc_project.TedSensor'"
+```
+
+Optional dynamic test (if source service supports Add/Remove API):
+
+```bash
+busctl call xyz.openbmc_project.TedSensor \
+    /xyz/openbmc_project/AddRemoveSensor \
+    xyz.openbmc_project.AddRemoveSensor RemoveSensor s "TedSensor2"
+
+busctl call xyz.openbmc_project.TedSensor \
+    /xyz/openbmc_project/AddRemoveSensor \
+    xyz.openbmc_project.AddRemoveSensor AddSensor s "TedSensor2"
+```
+
+## Logging
+
+```bash
+journalctl -u phosphor-ted-sensor-monitor.service -f
 ```

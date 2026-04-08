@@ -1,7 +1,5 @@
 #include "sensor.hpp"
 
-#include <iostream>
-
 Sensor::Sensor(std::shared_ptr<sdbusplus::asio::connection> conn,
                std::shared_ptr<sdbusplus::asio::object_server> objServer,
                const DBusPath& path, const DBusInterfaceMap& interfaces) :
@@ -17,7 +15,6 @@ void Sensor::createMatch()
     const std::string propertyChangedMatchString =
         type::signal() + path(_path) + member("PropertiesChanged") +
         interface("org.freedesktop.DBus.Properties") + sender(serviceName);
-    // TODO: 有可能不加sendor的話會觸發兩次 property changed?
 
     propertyChangedMatches = std::make_unique<sdbusplus::bus::match_t>(
         static_cast<sdbusplus::bus_t&>(*conn), propertyChangedMatchString,
@@ -26,8 +23,6 @@ void Sensor::createMatch()
             DBusPropertyMap properties;
 
             m.read(interface, properties);
-            std::cout << "property changed for interface "
-                      << interface << std::endl;
 
             if (this->interfaces.contains(interface))
             {
