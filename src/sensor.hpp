@@ -25,6 +25,7 @@ using DBusInterface = std::string;
 using DBusInterfaceMap = std::map<DBusInterface, DBusPropertyMap>;
 using DBusPath = std::string;
 
+static constexpr auto serviceName = "xyz.openbmc_project.TedSensor";
 class Sensor
 {
   public:

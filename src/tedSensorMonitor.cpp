@@ -8,8 +8,6 @@
 // see phosphor-logging/lib/include/phosphor-logging/lg2.hpp
 PHOSPHOR_LOG2_USING_WITH_FLAGS;
 
-static constexpr auto serviceName = "xyz.openbmc_project.TedSensor";
-
 using DBusObjectPath = sdbusplus::message::object_path;
 using DBusObjectMap = std::map<DBusObjectPath, DBusInterfaceMap>;
 
