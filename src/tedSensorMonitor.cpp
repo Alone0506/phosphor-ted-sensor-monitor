@@ -8,7 +8,7 @@
 // see phosphor-logging/lib/include/phosphor-logging/lg2.hpp
 PHOSPHOR_LOG2_USING_WITH_FLAGS;
 
-using DBusObjectPath = sdbusplus::message::object_path;
+using DBusObjectPath = sdbusplus::object_path;
 using DBusObjectMap = std::map<DBusObjectPath, DBusInterfaceMap>;
 
 // systemctl status phosphor-ted-sensor-monitor.service
@@ -49,11 +49,11 @@ void TedSensorMonitor::initial()
 
 void TedSensorMonitor::registerMatch()
 {
-    using namespace sdbusplus::bus::match::rules;
+    using namespace sdbusplus::match_rules;
     auto& bus = static_cast<sdbusplus::bus_t&>(*conn);
     if (!interfacesAddedMatch)
     {
-        interfacesAddedMatch = std::make_unique<sdbusplus::bus::match_t>(
+        interfacesAddedMatch = std::make_unique<sdbusplus::match>(
             bus,
             interfacesAdded() + path_namespace("/xyz/openbmc_project/sensors") +
                 sender(serviceName),
@@ -61,7 +61,7 @@ void TedSensorMonitor::registerMatch()
     }
     if (!interfacesRemovedMatch)
     {
-        interfacesRemovedMatch = std::make_unique<sdbusplus::bus::match_t>(
+        interfacesRemovedMatch = std::make_unique<sdbusplus::match>(
             bus,
             interfacesRemoved() +
                 path_namespace("/xyz/openbmc_project/sensors") +
@@ -72,7 +72,7 @@ void TedSensorMonitor::registerMatch()
 
 void TedSensorMonitor::interfaceAddedCallback(sdbusplus::message_t& m)
 {
-    sdbusplus::message::object_path objPath;
+    sdbusplus::object_path objPath;
     DBusInterfaceMap ifaceMap;
     try
     {
@@ -98,7 +98,7 @@ void TedSensorMonitor::interfaceAddedCallback(sdbusplus::message_t& m)
 
 void TedSensorMonitor::interfaceRemovedCallback(sdbusplus::message_t& m)
 {
-    sdbusplus::message::object_path objPath;
+    sdbusplus::object_path objPath;
     std::vector<std::string> interfaces;
     try
     {

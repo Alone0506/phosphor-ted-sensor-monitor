@@ -11,12 +11,12 @@ Sensor::Sensor(std::shared_ptr<sdbusplus::asio::connection> conn,
 
 void Sensor::createMatch()
 {
-    using namespace sdbusplus::bus::match::rules;
+    using namespace sdbusplus::match_rules;
     const std::string propertyChangedMatchString =
         type::signal() + path(_path) + member("PropertiesChanged") +
         interface("org.freedesktop.DBus.Properties") + sender(serviceName);
 
-    propertyChangedMatches = std::make_unique<sdbusplus::bus::match_t>(
+    propertyChangedMatches = std::make_unique<sdbusplus::match>(
         static_cast<sdbusplus::bus_t&>(*conn), propertyChangedMatchString,
         [this](sdbusplus::message_t& m) {
             DBusInterface interface;

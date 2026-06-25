@@ -44,5 +44,5 @@ class Sensor
     std::string _path;
     std::map<DBusInterface, std::shared_ptr<sdbusplus::asio::dbus_interface>>
         interfaces;
-    std::unique_ptr<sdbusplus::bus::match_t> propertyChangedMatches;
+    std::unique_ptr<sdbusplus::match> propertyChangedMatches;
 };
